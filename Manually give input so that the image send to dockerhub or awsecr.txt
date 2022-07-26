@@ -1,0 +1,64 @@
+#on:
+ # push:
+  #  branches: [ "master" ]
+  #pull_request:
+ #   branches: [ "master" ]
+name: "Approval Flow"
+on:
+  workflow_dispatch:
+    inputs:
+      name: 
+        type: choice
+        description: "Enter Reviewer name"
+        options: 
+        - Push to DockerHub
+        - Push to AWSECR
+        default: Build and push to docker hub
+        #required: true
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker images
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+ 
+  
+    - name: Build and push to docker hub
+      if: github.event.inputs.name == 'Push to DockerHub'
+      uses: LChaudhari/Git_to_dockergub@v5
+      
+      with:
+        file: ./Dockerfile
+        image: "lalit2656/my_repo_git"
+        tags: dockerimage
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}    
+      
+      
+      
+    - name: Build and Push to AWS ECR
+      if: github.event.inputs.name == 'Push to AWSECR'
+      uses: LChaudhari/Git_to_dockergub@v5
+      
+      with:
+        image: "dockerdemo"
+        registry: 018442532737.dkr.ecr.us-east-1.amazonaws.com
+      env:
+        name: build
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        
+  Prod:
+    runs-on: ubuntu-latest
+    environment: "LChaudhari"    #${{ github.event.inputs.name}}
+    needs: build
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run a script
+      run: |
+        echo "I have running a job in Prod Environment"

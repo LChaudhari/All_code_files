@@ -1,0 +1,44 @@
+#on:
+ # push:
+  #  branches: [ "master" ]
+  #pull_request:
+   # branches: [ "master" ]
+name: "Approval Flow"
+on:
+  workflow_dispatch:
+    inputs:
+      name: 
+        description: "Enter Reviewer name"
+        default: "LChaudhari"
+        required: true
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker images
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+ 
+  
+    - uses: LChaudhari/Git_to_dockergub@v5
+      name: Build and push to docker hub
+      with:
+        file: ./Dockerfile
+        image: lalit2656/my_repo_git
+        tags: dockerimage
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        
+  Prod:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.name}}
+    needs: build
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run a script
+      run: |
+        echo "I have running a job in Prod Environment"
